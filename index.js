@@ -1,11 +1,13 @@
 const express = require('express');
 const app = express();
 
+
+
 app.use(express.urlencoded({extended: true})); 
 app.use(express.json());  
 
-// const cors = require('cors');
-// app.use(cors());
+const cors = require('cors');
+app.use(cors());
 
  
 
@@ -14,8 +16,8 @@ app.use(express.json());
  
 // *** Routes
 
-// const auth = require('./routes/auth');
-// app.use('/auth', auth);
+const auth = require('./routes/auth');
+app.use('/auth', auth);
 
  
 app.listen(3000, () => console.log("server started")); //localhost porta 3000
