@@ -4,11 +4,11 @@ const { body } = require('express-validator');
 const authController = require("../controllers/auth");
 
 
-router.post('/signin',    
+router.post('/getChallenge',    
     [
         body('username').isLength({max : 100})
     ], 
-    authController.signin); //registrazione utente
+    authController.getChallenge); //registrazione utente
 
 
 module.exports = router;

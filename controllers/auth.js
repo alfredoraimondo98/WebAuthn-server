@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { Fido2Lib } = require("fido2-lib");
-
+const { generateRegistrationChallenge, parseRegisterRequest } = require('@webauthn/server')
 /**
  * Registrazione utente
  * @param {*} req 
@@ -8,7 +8,7 @@ const { Fido2Lib } = require("fido2-lib");
  * @param {*} next 
  * @returns 
  */
-exports.signin = async (req, res, next) => {
+exports.getChallenge = async (req, res, next) => {
 
     const errors = validationResult(req);
 
@@ -19,9 +19,58 @@ exports.signin = async (req, res, next) => {
         });
     }
 
-    var username = req.body.username;
-    console.log("username" , username)
-    return null
+    var name = req.body.username;
+    var id = "1"
+    console.log("username" , name)
+
+
+    /*genera una challenge da restituire al client */
+    const challengeResponse = generateRegistrationChallenge({
+        relyingParty: { name: 'localhost' },
+        user: { id, name },
+        attestation : "direct"
+    });
+
+    console.log("challenge response ", challengeResponse);
+   
+    const publicKeyCredentialCreationOptions = {
+        challenge: Uint8Array.from(challengeResponse.challenge, c => c.charCodeAt(0)),
+        rp: {
+            name: "WebAuthn Demo ",
+            id: "localhost",
+        },
+        user: {
+            id: Uint8Array.from(
+                id, c => c.charCodeAt(0)),
+            name: name,
+            displayName: name,
+        },
+        pubKeyCredParams: [
+            {alg: -7, type: "public-key"},
+            {alg: -257 , type: 'public-key'}],
+        authenticatorSelection: {
+            authenticatorAttachment: "cross-platform",
+        },
+        timeout: 60000,
+        attestation: "direct"
+    };
+
+  
+
+    const userRepository = {
+        id,
+        challenge: challengeResponse.challenge,
+        publicKeyCredentialCreationOptions : publicKeyCredentialCreationOptions
+    }
+
+
+    //console.log("challenge respense", challengeResponse)
+
+    res.send(userRepository);
+    
+
+ 
+    //return null
     
 }
 
