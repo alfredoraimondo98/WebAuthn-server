@@ -1,6 +1,8 @@
 const { validationResult } = require('express-validator');
 const { Fido2Lib } = require("fido2-lib");
-const { generateRegistrationChallenge, parseRegisterRequest } = require('@webauthn/server')
+const WebAuthn = require('webauthn')
+var crypto = require("crypto");
+
 /**
  * Registrazione utente
  * @param {*} req 
@@ -21,27 +23,21 @@ exports.getChallenge = async (req, res, next) => {
 
     var name = req.body.username;
     var id = "1"
-    console.log("username" , name)
+     
 
 
-    /*genera una challenge da restituire al client */
-    const challengeResponse = generateRegistrationChallenge({
-        relyingParty: { name: 'localhost' },
-        user: { id, name },
-        attestation : "direct"
-    });
+    const challengeResponse = crypto.randomBytes(20).toString('hex');
 
     console.log("challenge response ", challengeResponse);
    
     const publicKeyCredentialCreationOptions = {
-        challenge: Uint8Array.from(challengeResponse.challenge, c => c.charCodeAt(0)),
+        challenge: challengeResponse, //Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
         rp: {
             name: "WebAuthn Demo ",
             id: "localhost",
         },
         user: {
-            id: Uint8Array.from(
-                id, c => c.charCodeAt(0)),
+            id: id, //Uint8Array.from(id, c => c.charCodeAt(0)),
             name: name,
             displayName: name,
         },
@@ -49,28 +45,22 @@ exports.getChallenge = async (req, res, next) => {
             {alg: -7, type: "public-key"},
             {alg: -257 , type: 'public-key'}],
         authenticatorSelection: {
-            authenticatorAttachment: "cross-platform",
+            authenticatorAttachment: "platform",
         },
         timeout: 60000,
-        attestation: "direct"
+        attestation: "none"
     };
 
-  
+    
+    console.log("publicKeyCredentialCreationOptions ", publicKeyCredentialCreationOptions)
 
     const userRepository = {
-        id,
-        challenge: challengeResponse.challenge,
         publicKeyCredentialCreationOptions : publicKeyCredentialCreationOptions
     }
 
 
-    //console.log("challenge respense", challengeResponse)
-
-    res.send(userRepository);
-    
-
  
-    //return null
+    res.send(userRepository);
     
 }
 
