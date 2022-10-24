@@ -11,4 +11,9 @@ router.post('/getChallenge',
     authController.getChallenge); //registrazione utente
 
 
+    router.post('/signin',    
+    [ 
+    ], 
+    authController.signin); //registrazione utente
+
 module.exports = router;

@@ -1,8 +1,9 @@
 const { validationResult } = require('express-validator');
 const { Fido2Lib } = require("fido2-lib");
 const WebAuthn = require('webauthn')
-var crypto = require("crypto");
-
+const crypto = require("crypto");
+const base64url = require('base64url');
+const cbor = require('cbor');
 /**
  * Registrazione utente
  * @param {*} req 
@@ -48,7 +49,7 @@ exports.getChallenge = async (req, res, next) => {
             authenticatorAttachment: "platform",
         },
         timeout: 60000,
-        attestation: "none"
+        attestation: "direct"
     };
 
     
@@ -64,3 +65,39 @@ exports.getChallenge = async (req, res, next) => {
     
 }
 
+
+
+
+/**
+ * Registrazione utente
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} next 
+ * @returns 
+ */
+ exports.signin = async (req, res, next) => {
+    console.log("** signin *********************************************")
+    const errors = validationResult(req);
+
+    if(!errors.isEmpty()){ //verifica parametri sulla base dei controlli inseriti come middleware nella routes
+        return res.status(422).json({
+            message : 'Error input Parametri',
+            error : errors.array()
+        });
+    }
+
+    console.log("credential" , req.body.attestationObject)
+      
+        // Decode attestation object
+    let attestationObjectBuffer = base64url.toBuffer(req.body.attestationObject);
+    let ctapMakeCredResp = cbor.decodeAllSync(attestationObjectBuffer)[0];
+    console.log("ctap ", ctapMakeCredResp)
+    
+    
+    res.send("ok");
+    
+
+ 
+    //return null
+    
+}
