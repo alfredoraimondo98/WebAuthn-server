@@ -6,6 +6,8 @@ const base64url = require('base64url');
 const cbor = require('cbor');
 const vanillacbor = require("vanillacborsc")
 const service = require("../utils/service")
+
+
 /**
  * Creazione opzioni per la creazione delle credenziali (pre - registrazione)
  * @param {*} req 
@@ -13,7 +15,7 @@ const service = require("../utils/service")
  * @param {*} next 
  * @returns 
  */
-exports.getChallenge = async (req, res, next) => {
+exports.getSigninOptions = async (req, res, next) => {
 
     const errors = validationResult(req);
 
@@ -25,9 +27,11 @@ exports.getChallenge = async (req, res, next) => {
     }
 
     var name = req.body.username;
-    var id = "1"
+    //var id = "2"
+    var id = 'Kesv9fPtkDoh4Oz7Yq/pVgWHS8HhdlCto5cR0aBoVMw='
+
      
-    //store publicKey and CredentialId
+    //store user name
     service.user.name = name
     
     const challengeResponse = crypto.randomBytes(20).toString('hex');
@@ -58,13 +62,13 @@ exports.getChallenge = async (req, res, next) => {
     
     console.log("publicKeyCredentialCreationOptions ", publicKeyCredentialCreationOptions)
 
-    const userRepository = {
+    const options = {
         publicKeyCredentialCreationOptions : publicKeyCredentialCreationOptions
     }
 
 
  
-    res.send(userRepository);
+    res.send(options);
     
 }
 
@@ -104,10 +108,16 @@ exports.getChallenge = async (req, res, next) => {
     const publicKeyObject = cbor.decode(authData.cosePublicKeyBuffer)
     console.log("public key ", publicKeyObject)
 
-    
+
+    var id = 'ciaoId'
+    const s = Buffer.from(id, 'utf8');
+    console.log(" ciao id convertto", s.toString('latin1'))
+
+
+    console.log("**** buffer ID ", authData.credIdBuffer.toString('utf8'))
     
     //store publicKey and CredentialId
-    service.user.credentialId = authData.credIdBuffer
+    service.user.credentialId = req.body.credentialId //authData.credIdBuffer
     service.user.publicKey = publicKeyObject
     console.log("user complete ", service.user)
 
@@ -186,4 +196,58 @@ function parseAuthData(buffer) {
         throw new Error('Failed to decode authData! Leftover bytes been detected!');
 
     return {rpIdHash, counter, flags, counterBuffer, aaguid, credIdBuffer, cosePublicKeyBuffer, coseExtensionsDataBuffer}
+}
+
+
+
+
+/**
+ * Creazione opzioni per il recupero delle credenziali (pre - login)
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} next 
+ * @returns 
+ */
+ exports.getLoginOptions = async (req, res, next) => {
+
+    const errors = validationResult(req);
+
+    if(!errors.isEmpty()){ //verifica parametri sulla base dei controlli inseriti come middleware nella routes
+        return res.status(422).json({
+            message : 'Error input Parametri',
+            error : errors.array()
+        });
+    }
+
+    var name = req.body.username;
+    console.log("name ",name)
+
+    var id = 'Kosv9fPtkDoh4Oz7Yq/pVgWHS8HhdlCto5cR0aBoVMw='
+
+    //get user name
+    let user = service.user
+    console.log("user ", user) 
+ 
+    const challengeResponse = crypto.randomBytes(20).toString('hex');
+
+    console.log("challenge response ", challengeResponse);
+   
+    const publicKeyCredentialRequestOptions = {
+        challenge: challengeResponse, // Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
+        allowCredentials: [{
+            id: service.user.credentialId, //id, // service.user.credentialId, //Uint8Array.from(service.user.credentialId, c => c.charCodeAt(0)),
+            type: 'public-key',
+            transports: ['hybrid'],
+        }],
+        timeout: 60000,
+    }
+    
+    console.log("publicKeyCredentialRequestOptions ", publicKeyCredentialRequestOptions)
+
+    const options = {
+        publicKeyCredentialRequestOptions : publicKeyCredentialRequestOptions
+    }
+    
+    res.send(options);
+    
 }

@@ -4,16 +4,19 @@ const { body } = require('express-validator');
 const authController = require("../controllers/auth");
 
 
-router.post('/getChallenge',    
+router.post('/getSigninOptions',    
     [
         body('username').isLength({max : 100})
     ], 
-    authController.getChallenge); //registrazione utente
+    authController.getSigninOptions); //pre-registrazione
 
 
-    router.post('/signin',    
-    [ 
+router.post('/signin',[], authController.signin); //registrazione utente
+
+router.post('/getLoginOptions',    
+    [
+        body('username').isLength({max : 100})
     ], 
-    authController.signin); //registrazione utente
+    authController.getLoginOptions); //pre-login
 
 module.exports = router;
