@@ -19,4 +19,7 @@ router.post('/getLoginOptions',
     ], 
     authController.getLoginOptions); //pre-login
 
+router.post('/login',[], authController.login); //registrazione utente
+
+
 module.exports = router;

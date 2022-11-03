@@ -2,7 +2,9 @@ module.exports = {
 
     user : {
         name : '',
+        userID : '',
         credentialId: '',
-        publicKey : ''
+        publicKey : '',
+        cosePublicKeyBuffer : ''
     }
 }

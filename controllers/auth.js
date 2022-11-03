@@ -6,6 +6,8 @@ const base64url = require('base64url');
 const cbor = require('cbor');
 const vanillacbor = require("vanillacborsc")
 const service = require("../utils/service")
+const { user } = require('../utils/service');
+const { CKM_ECDSA_SHA256 } = require('pkcs11js');
 
 
 /**
@@ -33,19 +35,39 @@ exports.getSigninOptions = async (req, res, next) => {
      
     //store user name
     service.user.name = name
-    
-    const challengeResponse = crypto.randomBytes(20).toString('hex');
+    /*
+    // generate challenge and encode to base64
+    let challenge = new Uint8Array(32)
+    crypto.webcrypto.getRandomValues(challenge)
+    crypto.
+    console.log("CHALLENGE ", challenge)
+    challenge = base64url.encode(challenge)
+    console.log("CHALLENGE BASE64 ", challenge)
+    console.log("YYYY", base64url.decode(challenge))
+    //crypto.getRandomValues(challenge)
+    //const challengeResponse = crypto.randomBytes(20).toString('hex');
 
-    console.log("challenge response ", challengeResponse);
-   
+   // generate userID and encode in base64
+    var userID = 'Kosv9fPtkDoh4Oz7Yq/pVgWHS8HhdlCto5cR0aBoVMw='
+    var id = Uint8Array.from(atob(userID), c=>c.charCodeAt(0))
+    console.log("id ", id)
+    var id = base64url.encode(userID)
+    var stringDecoded = base64url.decode(id)
+    console.log("XXXXXXX ", stringDecoded)
+    */
+
+    const userID = "UZSL85T9AFC"
+    const challenge = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk"
+ 
+
     const publicKeyCredentialCreationOptions = {
-        challenge: challengeResponse, //Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
+        challenge: challenge, //Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
         rp: {
             name: "WebAuthn Demo ",
             id: "localhost",
         },
         user: {
-            id: id, //Uint8Array.from(id, c => c.charCodeAt(0)),
+            id: userID, //Uint8Array.from(id, c => c.charCodeAt(0)),
             name: name,
             displayName: name,
         },
@@ -61,6 +83,7 @@ exports.getSigninOptions = async (req, res, next) => {
 
     
     console.log("publicKeyCredentialCreationOptions ", publicKeyCredentialCreationOptions)
+
 
     const options = {
         publicKeyCredentialCreationOptions : publicKeyCredentialCreationOptions
@@ -99,7 +122,7 @@ exports.getSigninOptions = async (req, res, next) => {
     let attestationObjectBuffer = base64url.toBuffer(req.body.attestationObject);
     let ctapMakeCredResp = cbor.decodeAllSync(attestationObjectBuffer)[0];
     console.log("ctap ", ctapMakeCredResp)
-    
+   
     // parse authData
     let authData = parseAuthData(ctapMakeCredResp.authData)
     console.log("auth data", authData)
@@ -108,17 +131,11 @@ exports.getSigninOptions = async (req, res, next) => {
     const publicKeyObject = cbor.decode(authData.cosePublicKeyBuffer)
     console.log("public key ", publicKeyObject)
 
-
-    var id = 'ciaoId'
-    const s = Buffer.from(id, 'utf8');
-    console.log(" ciao id convertto", s.toString('latin1'))
-
-
-    console.log("**** buffer ID ", authData.credIdBuffer.toString('utf8'))
-    
+     
     //store publicKey and CredentialId
-    service.user.credentialId = req.body.credentialId //authData.credIdBuffer
+    service.user.credentialId = authData.credIdBuffer //credentialId,// req.body.credentialId // base64url.encode(authData.credIdBuffer) // req.body.credentialId //authData.credIdBuffer
     service.user.publicKey = publicKeyObject
+    service.user.cosePublicKeyBuffer = authData.cosePublicKeyBuffer
     console.log("user complete ", service.user)
 
 
@@ -222,7 +239,13 @@ function parseAuthData(buffer) {
     var name = req.body.username;
     console.log("name ",name)
 
-    var id = 'Kosv9fPtkDoh4Oz7Yq/pVgWHS8HhdlCto5cR0aBoVMw='
+    //verificare la presenza dello username inserito 
+    if(!(name == service.user.name)){
+        let result = 'utente non presente'
+        res.send(result)
+    }
+
+    var id = 'UZSL85T9AFC'
 
     //get user name
     let user = service.user
@@ -235,7 +258,7 @@ function parseAuthData(buffer) {
     const publicKeyCredentialRequestOptions = {
         challenge: challengeResponse, // Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
         allowCredentials: [{
-            id: service.user.credentialId, //id, // service.user.credentialId, //Uint8Array.from(service.user.credentialId, c => c.charCodeAt(0)),
+            id: service.user.credentialId, //base64url.encode(service.user.credentialId), //id , //service.user.credentialId, //id, // service.user.credentialId, //Uint8Array.from(service.user.credentialId, c => c.charCodeAt(0)),
             type: 'public-key',
             transports: ['hybrid'],
         }],
@@ -250,4 +273,159 @@ function parseAuthData(buffer) {
     
     res.send(options);
     
+}
+
+
+/**
+ * login
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} next 
+ */
+exports.login = async (req, res, next) => {
+
+    console.log("** LOGIN *********************************************")
+    const errors = validationResult(req);
+
+    if(!errors.isEmpty()){ //verifica parametri sulla base dei controlli inseriti come middleware nella routes
+        return res.status(422).json({
+            message : 'Error input Parametri',
+            error : errors.array()
+        });
+    }
+
+    console.log("assertionCredential" , req.body)
+
+     
+
+
+    // Decode authenticatorData from Base64 to Buffer
+    let authenticatorData = base64url.toBuffer(req.body.authenticatorData);
+    console.log("authenticatorData ", authenticatorData)
+
+
+    // Decode signature from Base64 to Buffer
+    let signature = base64url.toBuffer(req.body.signature);
+    console.log("signature ", signature)
+
+
+    console.log("client data json ", req.body.clientDataJSON)
+    let clientDataJson = JSON.stringify(req.body.clientDataJSON) 
+    clientDataJson = base64url.encode(clientDataJson) //encode clientDataJson into base64
+    console.log("client data Json base 64", clientDataJson);
+
+    clientDataJson = base64url.toBuffer(clientDataJson) // convert clientDataJson into buffer
+    console.log("client data json buffer ", clientDataJson)
+
+    var hashedClientData = crypto.createHash('SHA256').update(clientDataJson).digest(); //create hash SHA256 of clientDataJson
+    console.log("hashedData ", hashedClientData);
+
+
+    let signedData = Buffer.concat([authenticatorData, hashedClientData]) //signedData = authenticatorData + hashedClientDataJson
+    console.log("signed data ", signedData)
+
+
+    let publicKey = COSEECDHAtoPKCS(service.user.cosePublicKeyBuffer) //get Buffer from COSE format public key
+    console.log("public key ", publicKey)
+
+    publicKey = ASN1toPEM(publicKey) //convert to pem format
+    console.log("pem public key ", publicKey)
+
+    const signatureIsValid = crypto.verify("SHA256", signedData, publicKey, signature) //verify signature with publicKey obtained during register
+   
+    if (signatureIsValid) {
+        console.log(" User is authenticated")
+        var result = {
+            res : "User is authenticated"
+        }
+    } else {
+        console.log("Verification failed")
+        var result = {
+            res : "Verification failed"
+        }
+
+    }
+    
+    res.send(result)
+}
+
+
+
+/**
+ * Takes COSE encoded public key and converts it to RAW PKCS ECDHA key
+ * @param  {Buffer} COSEPublicKey - COSE encoded public key
+ * @return {Buffer}               - RAW PKCS encoded public key
+ */
+ let COSEECDHAtoPKCS = (COSEPublicKey) => {
+    /* 
+       +------+-------+-------+---------+----------------------------------+
+       | name | key   | label | type    | description                      |
+       |      | type  |       |         |                                  |
+       +------+-------+-------+---------+----------------------------------+
+       | crv  | 2     | -1    | int /   | EC Curve identifier - Taken from |
+       |      |       |       | tstr    | the COSE Curves registry         |
+       |      |       |       |         |                                  |
+       | x    | 2     | -2    | bstr    | X Coordinate                     |
+       |      |       |       |         |                                  |
+       | y    | 2     | -3    | bstr /  | Y Coordinate                     |
+       |      |       |       | bool    |                                  |
+       |      |       |       |         |                                  |
+       | d    | 2     | -4    | bstr    | Private key                      |
+       +------+-------+-------+---------+----------------------------------+
+    */
+
+    let coseStruct = cbor.decodeAllSync(COSEPublicKey)[0];
+    let tag = Buffer.from([0x04]);
+    let x   = coseStruct.get(-2);
+    let y   = coseStruct.get(-3);
+
+    return Buffer.concat([tag, x, y])
+}
+
+
+/**
+ * Convert binary certificate or public key to an OpenSSL-compatible PEM text format.
+ * @param  {Buffer} buffer - Cert or PubKey buffer
+ * @return {String}             - PEM
+ */
+ let ASN1toPEM = (pkBuffer) => {
+    if (!Buffer.isBuffer(pkBuffer))
+        throw new Error("ASN1toPEM: pkBuffer must be Buffer.")
+
+    let type;
+    if (pkBuffer.length == 65 && pkBuffer[0] == 0x04) {
+        /*
+            If needed, we encode rawpublic key to ASN structure, adding metadata:
+            SEQUENCE {
+              SEQUENCE {
+                 OBJECTIDENTIFIER 1.2.840.10045.2.1 (ecPublicKey)
+                 OBJECTIDENTIFIER 1.2.840.10045.3.1.7 (P-256)
+              }
+              BITSTRING <raw public key>
+            }
+            Luckily, to do that, we just need to prefix it with constant 26 bytes (metadata is constant).
+        */
+        
+        pkBuffer = Buffer.concat([
+            new Buffer.from("3059301306072a8648ce3d020106082a8648ce3d030107034200", "hex"),
+            pkBuffer
+        ]);
+
+        type = 'PUBLIC KEY';
+    } else {
+        type = 'CERTIFICATE';
+    }
+
+    let b64cert = pkBuffer.toString('base64');
+
+    let PEMKey = '';
+    for(let i = 0; i < Math.ceil(b64cert.length / 64); i++) {
+        let start = 64 * i;
+
+        PEMKey += b64cert.substr(start, 64) + '\n';
+    }
+
+    PEMKey = `-----BEGIN ${type}-----\n` + PEMKey + `-----END ${type}-----\n`;
+    
+    return PEMKey
 }
