@@ -21,6 +21,7 @@
     "nodemon": "^2.0.20"
   },
   "dependencies": {
+    "algosdk": "^1.23.1",
     "cbor": "^8.1.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",

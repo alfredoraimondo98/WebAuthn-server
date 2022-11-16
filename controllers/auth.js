@@ -76,6 +76,7 @@ exports.getSigninOptions = async (req, res, next) => {
             {alg: -257 , type: 'public-key'}],
         authenticatorSelection: {
             authenticatorAttachment: "cross-platform",
+            //userVerification: "required"
         },
         timeout: 60000,
         attestation: "direct"
