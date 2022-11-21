@@ -9,6 +9,13 @@ router.get('/createAccount',
     [], 
     algorandController.createAccount); 
 
+router.get('/getAccount', [], algorandController.getAccount);
+
 router.get('/getBalance', [], algorandController.getBalance);
+
+router.get('/createApp', algorandController.createApp)
+
+router.get('/callApp', algorandController.callApp)
+
 
 module.exports = router;
