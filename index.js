@@ -57,6 +57,8 @@ function testPKCS11(){
 
     pkcs11.C_Initialize()
 
+    
+
     try {
         // Getting info about PKCS11 Module
         var module_info = pkcs11.C_GetInfo();

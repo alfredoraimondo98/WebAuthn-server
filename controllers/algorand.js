@@ -2,7 +2,7 @@ const { AtomicTransactionComposer, ABIContract } = require('algosdk');
 const algosdk = require('algosdk');
 const { ABIMethod } = require('algosdk/dist/cjs/src/abi/method');
 const { Router } = require('express');
- 
+const fs = require('fs')
 const server="https://testnet-algorand.api.purestake.io/ps2";
 const port="";
 const token={
@@ -207,18 +207,18 @@ exports.callApp = async (req, res, next) => {
     let sp = await client.getTransactionParams().do()
 
     let appId = 124087841
-
+    console.log(" here ")
     
     const atc = new algosdk.AtomicTransactionComposer()
 
     // Read in the local contract.json file
-    //const buff = fs.readFileSync("path/to/contract.json")
+    const buff = fs.readFileSync("./contracts/contract.json")
 
-    let buff = {"name": "my-first-router", "methods": [{"name": "increment", "args": [], "returns": {"type": "void"}}, {"name": "decrement", "args": [], "returns": {"type": "void"}}], "networks": {}}    
+    //let buff = {"name": "my-first-router", "methods": [{"name": "increment", "args": [], "returns": {"type": "void"}}, {"name": "decrement", "args": [], "returns": {"type": "void"}}], "networks": {}}    
 
 
     // Parse the json file into an object, pass it to create an ABIContract object
-    const contract = new algosdk.ABIContract(buff)
+    const contract = new algosdk.ABIContract(JSON.parse(buff))
 
 
     //console.log("get app Id ", await client.genesis().do())
@@ -236,7 +236,7 @@ exports.callApp = async (req, res, next) => {
     let app = await client.getApplicationByID(appId).do()
     console.log("State pre operation ", app['params']['global-state'])
 
-
+    
     // Simple call to the `add` method, method_args can be any type but _must_ 
     // match those in the method signature of the contract
     atc.addMethodCall({

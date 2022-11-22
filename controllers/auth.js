@@ -8,7 +8,8 @@ const vanillacbor = require("vanillacborsc")
 const service = require("../utils/service")
 const { user } = require('../utils/service');
 const { CKM_ECDSA_SHA256 } = require('pkcs11js');
-
+const database = require('../utils/database')
+const query = require('../utils/queries')
 
 /**
  * Creazione opzioni per la creazione delle credenziali (pre - registrazione)
@@ -140,6 +141,18 @@ exports.getSigninOptions = async (req, res, next) => {
     console.log("user complete ", service.user)
 
 
+
+    const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
+
+    try{
+        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), service.user.name, base64url.encode(authData.cosePublicKeyBuffer)]); 
+
+    }   
+    catch(err){
+        console.log("error: ", err)
+    }
+
+
      result = {
         res : "registrazione completata"
     }
@@ -240,11 +253,28 @@ function parseAuthData(buffer) {
     var name = req.body.username;
     console.log("name ",name)
 
-    //verificare la presenza dello username inserito 
+    //verificare la presenza dello username inserito nel database
+    const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
+
+    try{
+        const [rows, field] = await connection.query(query.getUserByName, [name]); //Creazione utente
+        console.log("rows ", rows[0])
+        if(rows != undefined){
+            service.user.name = name;
+            service.user.credentialId = base64url.toBuffer(rows[0].credential_id)
+            service.user.cosePublicKeyBuffer = base64url.toBuffer(rows[0].public_key)
+        }
+    }
+    catch(err){
+        console.log("error: ", err)
+    }
+
+    /*
     if(!(name == service.user.name)){
         let result = 'utente non presente'
         res.send(result)
     }
+    */
 
     var id = 'UZSL85T9AFC'
 
@@ -297,8 +327,15 @@ exports.login = async (req, res, next) => {
 
     console.log("assertionCredential" , req.body)
 
-     
+    const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
 
+    try{
+        const [rows, field] = await connection.query(query.getUserByUsername, [service.user.name]); //Creazione utente
+        console.log("rows ", rows[0])
+    }
+    catch(err){
+        console.log("error: ", error)
+    }
 
     // Decode authenticatorData from Base64 to Buffer
     let authenticatorData = base64url.toBuffer(req.body.authenticatorData);
