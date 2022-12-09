@@ -10,7 +10,9 @@ const { user } = require('../utils/service');
 const { CKM_ECDSA_SHA256 } = require('pkcs11js');
 const database = require('../utils/database')
 const query = require('../utils/queries')
-
+const algosdk = require('algosdk');
+const { generateAccount } = require('algosdk');
+ 
 /**
  * Creazione opzioni per la creazione delle credenziali (pre - registrazione)
  * @param {*} req 
@@ -73,8 +75,10 @@ exports.getSigninOptions = async (req, res, next) => {
             displayName: name,
         },
         pubKeyCredParams: [
+            //{alg: -6, type: "public-key"}, //Ed25519
             {alg: -7, type: "public-key"},
-            {alg: -257 , type: 'public-key'}],
+            //{alg: -257 , type: 'public-key'}
+        ],
         authenticatorSelection: {
             authenticatorAttachment: "cross-platform",
             //userVerification: "required"
@@ -152,8 +156,38 @@ exports.getSigninOptions = async (req, res, next) => {
         console.log("error: ", err)
     }
 
+    /***
+     * 
+     */
 
-     result = {
+    const server="https://testnet-algorand.api.purestake.io/ps2";
+    const port="";
+    const token={
+         "x-api-key": "cFytdDh7ETMLwFujzahn1V7710kbJFL5ZPIZhOMj" // fill in yours
+    };
+    
+    const tokenKMD = {
+        "X-KMD-API-Token" : "cFytdDh7ETMLwFujzahn1V7710kbJFL5ZPIZhOMj"
+    };
+
+    let client = new algosdk.Algodv2(token,server,port);
+ 
+     
+    let account = algosdk.generateAccount(service.user.cosePublicKeyBuffer)
+    console.log("account ", account)
+
+    let kmd = new algosdk.Kmd(tokenKMD, server, port)
+    let wallet = (await kmd.createWallet("name", "pass", "", "")).wallet.id
+    
+    let add = await kmd.importKey(service.user.cosePublicKeyBuffer)
+
+    
+
+    /**
+     * PROVA A CREARE UN ACCOUNT
+     */
+
+    result = {
         res : "registrazione completata"
     }
     res.send(result);
@@ -257,7 +291,7 @@ function parseAuthData(buffer) {
     const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
 
     try{
-        const [rows, field] = await connection.query(query.getUserByName, [name]); //Creazione utente
+        const [rows, field] = await connection.query(query.getUserByUsername, [name]); //Creazione utente
         console.log("rows ", rows[0])
         if(rows != undefined){
             service.user.name = name;
