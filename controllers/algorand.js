@@ -12,7 +12,7 @@ const cbor = require('cbor');
 const { MyAlgoConnect } = require('@randlabs/myalgo-connect');
 const { check } = require('express-validator');
 const Wallet = require('@lorena-ssi/wallet-lib').default
-
+ 
 
 const server="https://testnet-algorand.api.purestake.io/ps2";
 const port="";
@@ -72,6 +72,8 @@ exports.createAlgorandAccount = async (req, res, next) => {
 
     console.log("account info ", await client.accountInformation(account.addr).do())
 
+
+ 
 
     //myWallet.unlock('myPassword')
     //res.send(account)

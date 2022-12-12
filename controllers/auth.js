@@ -12,7 +12,8 @@ const database = require('../utils/database')
 const query = require('../utils/queries')
 const algosdk = require('algosdk');
 const { generateAccount } = require('algosdk');
- 
+const Wallet = require('@lorena-ssi/wallet-lib').default
+
 /**
  * Creazione opzioni per la creazione delle credenziali (pre - registrazione)
  * @param {*} req 
@@ -156,39 +157,11 @@ exports.getSigninOptions = async (req, res, next) => {
         console.log("error: ", err)
     }
 
-    /***
-     * 
-     */
-
-    const server="https://testnet-algorand.api.purestake.io/ps2";
-    const port="";
-    const token={
-         "x-api-key": "cFytdDh7ETMLwFujzahn1V7710kbJFL5ZPIZhOMj" // fill in yours
-    };
-    
-    const tokenKMD = {
-        "X-KMD-API-Token" : "cFytdDh7ETMLwFujzahn1V7710kbJFL5ZPIZhOMj"
-    };
-
-    let client = new algosdk.Algodv2(token,server,port);
- 
-     
-    let account = algosdk.generateAccount(service.user.cosePublicKeyBuffer)
-    console.log("account ", account)
-
-    let kmd = new algosdk.Kmd(tokenKMD, server, port)
-    let wallet = (await kmd.createWallet("name", "pass", "", "")).wallet.id
-    
-    let add = await kmd.importKey(service.user.cosePublicKeyBuffer)
-
-    
-
-    /**
-     * PROVA A CREARE UN ACCOUNT
-     */
+    let myWallet = await createAlgorandWallet(service.user.name)
 
     result = {
-        res : "registrazione completata"
+        res : "registrazione completata",
+        myWallet : myWallet
     }
     res.send(result);
     
@@ -407,8 +380,14 @@ exports.login = async (req, res, next) => {
    
     if (signatureIsValid) {
         console.log(" User is authenticated")
+
+        //recupera account algorand 
+        console.log("usernmae ", service.user.name)
+        let account = await loginAlgorandWallet(service.user.name)
+
         var result = {
-            res : "User is authenticated"
+            res : "User is authenticated",
+            account : account
         }
     } else {
         console.log("Verification failed")
@@ -500,4 +479,83 @@ exports.login = async (req, res, next) => {
     PEMKey = `-----BEGIN ${type}-----\n` + PEMKey + `-----END ${type}-----\n`;
     
     return PEMKey
+}
+
+
+
+
+async function createAlgorandWallet(username){
+     
+    let account = await algosdk.generateAccount()
+
+    console.log("account ", account.sk )
+
+     
+    const options = {
+        storage: 'fs', // default in the filesystem; 'mem' for in-memory
+        silent: true // default silences Zenroom debugging messages
+    }
+    
+    // create your instance of the wallet with the username supplied
+    const myWallet = new Wallet(username, options) 
+    console.log("my wallet ", myWallet)
+
+    // attempt to unlock an existing wallet (since it is in-memory, this will be `false`)
+    let result = await myWallet.unlock('password')
+    console.log("result unlock ", result)
+
+    // this is a new wallet, so `unlock` returned `false`.
+    if(result == false){
+        console.log("false")
+    }
+
+    myWallet.pubKey = 'public key webauthN'
+    myWallet.info.myData = 'this is my sensitive data'
+    myWallet.info.keyPair = account
+
+    // write changes to disk (encrypted: you need to supply the password)
+    result = await myWallet.lock('password')
+    console.log("result lock ", result)
+
+
+    console.log("my wallet writed ", myWallet)
+
+    return myWallet
+}
+
+
+async function loginAlgorandWallet(username){
+
+    const options = {
+        storage: 'fs', // default in the filesystem; 'mem' for in-memory
+        silent: true // default silences Zenroom debugging messages
+    }
+
+    const myWalletRetrieved = new Wallet(username, options)
+    result = await myWalletRetrieved.unlock('password')
+    if(result){
+        console.log(" myWalletRetrieved" , myWalletRetrieved)
+    }
+
+    let account = myWalletRetrieved.info.keyPair
+
+    console.log("my account ", account)
+
+
+    const server="https://testnet-algorand.api.purestake.io/ps2";
+    const port="";
+    const token={
+        "x-api-key": "cFytdDh7ETMLwFujzahn1V7710kbJFL5ZPIZhOMj" // fill in yours
+    };
+
+    let client = new algosdk.Algodv2(token,server,port);
+    let infoClient =  await client.accountInformation(account.addr).do();
+
+    console.log("account info ", infoClient)
+
+    account.amount = infoClient.amount
+    account.username = username
+    
+    return account;
+
 }
