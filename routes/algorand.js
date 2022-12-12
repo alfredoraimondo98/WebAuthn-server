@@ -28,5 +28,6 @@ router.get('/rekey', algorandController.rekeyTest)
 
 router.get('/algowallet', algorandController.algo)
 
+router.get('/create-algorand-account', algorandController.createAlgorandAccount)
 
 module.exports = router;

@@ -10,6 +10,8 @@ const base32 = require('base32')
 const base64url = require('base64url');
 const cbor = require('cbor');
 const { MyAlgoConnect } = require('@randlabs/myalgo-connect');
+const { check } = require('express-validator');
+const Wallet = require('@lorena-ssi/wallet-lib').default
 
 
 const server="https://testnet-algorand.api.purestake.io/ps2";
@@ -19,6 +21,61 @@ const token={
 };
 
 let client = new algosdk.Algodv2(token,server,port);
+
+
+exports.createAlgorandAccount = async (req, res, next) => {
+    /*
+    let account = await algosdk.generateAccount()
+
+    console.log("account ", account.sk )
+
+    */
+    const options = {
+        storage: 'fs', // default in the filesystem; 'mem' for in-memory
+        silent: true // default silences Zenroom debugging messages
+    }
+    /*
+    // create your instance of the wallet with the username supplied
+    const myWallet = new Wallet('alfredo 3', options) 
+    console.log("my wallet ", myWallet)
+
+    // attempt to unlock an existing wallet (since it is in-memory, this will be `false`)
+    let result = await myWallet.unlock(account.sk)
+    console.log("result unlock ", result)
+
+    // this is a new wallet, so `unlock` returned `false`.
+    if(result == false){
+        console.log("false")
+    }
+
+    myWallet.pubKey = 'public key webauthN'
+    myWallet.info.myData = 'this is my sensitive data'
+    myWallet.info.keyPair = account
+
+    // write changes to disk (encrypted: you need to supply the password)
+    result = await myWallet.lock(account.sk)
+    console.log("result lock ", result)
+
+
+    console.log("my wallet writed ", myWallet)
+    */
+    console.log("x")
+    const myWalletRetrieved = new Wallet('alfredo', options)
+    result = await myWalletRetrieved.unlock('password')
+    if(result){
+        console.log(" myWalletRetrieved" , myWalletRetrieved)
+    }
+
+    let account = myWalletRetrieved.info.keyPair
+
+    console.log("my account ", account)
+
+    console.log("account info ", await client.accountInformation(account.addr).do())
+
+
+    //myWallet.unlock('myPassword')
+    //res.send(account)
+}
 
 
 /**
@@ -67,7 +124,7 @@ exports.algo = async (req, res, next) => {
 
     const myAlgoConnect = new MyAlgoConnect()
     const accountsSharedByUser = await myAlgoConnect.connect()
-
+    
 
 
 

@@ -21,6 +21,7 @@
     "nodemon": "^2.0.20"
   },
   "dependencies": {
+    "@lorena-ssi/wallet-lib": "^1.1.6",
     "@randlabs/myalgo-connect": "^1.4.2",
     "algosdk": "^1.23.1",
     "base32": "^0.0.7",
