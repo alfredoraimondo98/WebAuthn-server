@@ -73,8 +73,13 @@ const auth = require('./routes/auth');
 app.use('/auth', auth);
 
 const algorand = require('./routes/algorand');
-const { Algodv2 } = require('algosdk');
 app.use('/algorand', algorand)
+
+const actions = require('./routes/actions')
+app.use('/actions', actions)
+
+const { Algodv2 } = require('algosdk');
+
 
 
 

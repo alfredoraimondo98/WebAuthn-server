@@ -490,9 +490,15 @@ async function createAlgorandWallet(username){
 
     console.log("account ", account.sk )
 
+    
+
+    let mnemonic = await algosdk.secretKeyToMnemonic(account.sk)
+    console.log("mnemonic sk ", mnemonic)
+
+
      
     const options = {
-        storage: 'fs', // default in the filesystem; 'mem' for in-memory
+        storage: 'fs', // 'fs' default in the filesystem; 'mem' for in-memory
         silent: true // default silences Zenroom debugging messages
     }
     
@@ -511,6 +517,7 @@ async function createAlgorandWallet(username){
 
     myWallet.pubKey = 'public key webauthN'
     myWallet.info.myData = 'this is my sensitive data'
+    myWallet.info.myMnemonic = mnemonic
     myWallet.info.keyPair = account
 
     // write changes to disk (encrypted: you need to supply the password)
@@ -540,7 +547,7 @@ async function loginAlgorandWallet(username){
     let account = myWalletRetrieved.info.keyPair
 
     console.log("my account ", account)
-
+    
 
     const server="https://testnet-algorand.api.purestake.io/ps2";
     const port="";
