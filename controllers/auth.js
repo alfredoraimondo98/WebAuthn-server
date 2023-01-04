@@ -13,6 +13,7 @@ const query = require('../utils/queries')
 const algosdk = require('algosdk');
 const { generateAccount } = require('algosdk');
 const Wallet = require('@lorena-ssi/wallet-lib').default
+const utility = require('../utils/utility')
 
 /**
  * Creazione opzioni per la creazione delle credenziali (pre - registrazione)
@@ -61,8 +62,9 @@ exports.getSigninOptions = async (req, res, next) => {
     */
 
     const userID = "UZSL85T9AFC"
-    const challenge = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk"
- 
+    //const challenge = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk"
+    const challenge = crypto.randomBytes(20).toString('hex');
+
 
     const publicKeyCredentialCreationOptions = {
         challenge: challenge, //Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
@@ -150,18 +152,19 @@ exports.getSigninOptions = async (req, res, next) => {
     const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
 
     try{
-        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), service.user.name, base64url.encode(authData.cosePublicKeyBuffer)]); 
+        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), service.user.name, base64url.encode(authData.cosePublicKeyBuffer), "req.body.ch"]); 
 
     }   
     catch(err){
         console.log("error: ", err)
-    }
+    }    
 
-    let myWallet = await createAlgorandWallet(service.user.name)
+    //let myWallet = await createAlgorandWallet(service.user.name)
 
     result = {
         res : "registrazione completata",
-        myWallet : myWallet
+        bool : true
+        //myWallet : myWallet
     }
     res.send(result);
     
@@ -290,6 +293,7 @@ function parseAuthData(buffer) {
     console.log("user ", user) 
  
     const challengeResponse = crypto.randomBytes(20).toString('hex');
+    //const challengeResponse = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk'
 
     console.log("challenge response ", challengeResponse);
    
