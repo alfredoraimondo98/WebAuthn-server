@@ -56,8 +56,12 @@ exports.createTransaction = async(req, res, next) => {
 
     let result = await utility.authenticateOp(req.body)
 
+
     console.log(" RESULT ", result)
 
+    res.send(result)
+
+/*
     let myAccount = result.account
 
     if (result.res == 'User is authenticated'){
@@ -111,6 +115,6 @@ exports.createTransaction = async(req, res, next) => {
         console.log("Account balance: %d microAlgos", accountInfo.amount);
 
         }
-
+*/
 
 }

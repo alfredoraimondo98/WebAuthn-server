@@ -119,11 +119,12 @@ exports.authenticateOp = async function authenticateOp(body){
 
         //recupera account algorand 
         console.log("usernmae ", service.user.name)
-        let account = await loginAlgorandWallet(service.user.name)
+        //let account = await loginAlgorandWallet(service.user.name)
 
         var result = {
             res : "User is authenticated",
-            account : account
+            //account : account
+            bool : true
         }
     } else {
         console.log("Verification failed")
