@@ -387,11 +387,12 @@ exports.login = async (req, res, next) => {
 
         //recupera account algorand 
         console.log("usernmae ", service.user.name)
-        let account = await loginAlgorandWallet(service.user.name)
+        //let account = await loginAlgorandWallet(service.user.name)
 
         var result = {
             res : "User is authenticated",
-            account : account
+            bool : true
+            //account : account
         }
     } else {
         console.log("Verification failed")
