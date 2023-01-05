@@ -152,7 +152,7 @@ exports.getSigninOptions = async (req, res, next) => {
     const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
 
     try{
-        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), service.user.name, base64url.encode(authData.cosePublicKeyBuffer), "req.body.ch"]); 
+        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), service.user.name, base64url.encode(authData.cosePublicKeyBuffer)]); 
 
     }   
     catch(err){
@@ -163,7 +163,8 @@ exports.getSigninOptions = async (req, res, next) => {
 
     result = {
         res : "registrazione completata",
-        bool : true
+        bool : true,
+        credentialId : base64url.encode(authData.credIdBuffer),
         //myWallet : myWallet
     }
     res.send(result);
@@ -335,14 +336,15 @@ exports.login = async (req, res, next) => {
             error : errors.array()
         });
     }
-
+    var user;
     console.log("assertionCredential" , req.body)
 
     const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
 
     try{
-        const [rows, field] = await connection.query(query.getUserByUsername, [service.user.name]); //Creazione utente
+        const [rows, field] = await connection.query(query.getUserByUsername, [service.user.name]); //recupera informazioni utente
         console.log("rows ", rows[0])
+        user = rows[0]
     }
     catch(err){
         console.log("error: ", error)
@@ -391,7 +393,8 @@ exports.login = async (req, res, next) => {
 
         var result = {
             res : "User is authenticated",
-            bool : true
+            bool : true,
+            credentialId : user.credential_id,
             //account : account
         }
     } else {
