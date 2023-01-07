@@ -78,6 +78,9 @@ app.use('/algorand', algorand)
 const actions = require('./routes/actions')
 app.use('/actions', actions)
 
+const download = require('./routes/download')
+app.use('/download', download)
+
 const { Algodv2 } = require('algosdk');
 
 
