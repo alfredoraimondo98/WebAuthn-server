@@ -22,4 +22,11 @@ router.post('/getLoginOptions',
 router.post('/login',[], authController.login); //registrazione utente
 
 
+router.post('/updateCredentialsGetOptions', authController.updateCredentialsGetOptions); //verifica l'esistenza del credentialId e avvia il processo di creazione di nuove credenziali
+
+
+router.post('/updateCredentials', authController.updateCredentials); //Crea e aggiorna le credenziali dell'utente con una nuova coppia di chiavi WebAuthhN
+
+router.post('/deleteCredentials', authController.deleteCredentials); //elimina le credenziali 
+
 module.exports = router;

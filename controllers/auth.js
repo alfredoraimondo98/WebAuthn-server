@@ -1,4 +1,4 @@
-const { validationResult } = require('express-validator');
+const { validationResult, check } = require('express-validator');
 const { Fido2Lib } = require("fido2-lib");
 const WebAuthn = require('webauthn')
 const crypto = require("crypto");
@@ -40,28 +40,15 @@ exports.getSigninOptions = async (req, res, next) => {
      
     //store user name
     service.user.name = name
-    /*
-    // generate challenge and encode to base64
-    let challenge = new Uint8Array(32)
-    crypto.webcrypto.getRandomValues(challenge)
-    crypto.
-    console.log("CHALLENGE ", challenge)
-    challenge = base64url.encode(challenge)
-    console.log("CHALLENGE BASE64 ", challenge)
-    console.log("YYYY", base64url.decode(challenge))
-    //crypto.getRandomValues(challenge)
-    //const challengeResponse = crypto.randomBytes(20).toString('hex');
+   
 
-   // generate userID and encode in base64
-    var userID = 'Kosv9fPtkDoh4Oz7Yq/pVgWHS8HhdlCto5cR0aBoVMw='
-    var id = Uint8Array.from(atob(userID), c=>c.charCodeAt(0))
-    console.log("id ", id)
-    var id = base64url.encode(userID)
-    var stringDecoded = base64url.decode(id)
-    console.log("XXXXXXX ", stringDecoded)
-    */
+ 
 
-    const userID = "UZSL85T9AFC"
+    //const userID = "UZSL85T9AFC"
+    const randomUserID = crypto.randomBytes(8).toString('hex');
+    const userID = randomUserID.concat(new Date().getTime())
+    console.log("user ID", userID)
+
     //const challenge = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk"
     const challenge = crypto.randomBytes(20).toString('hex');
 
@@ -145,14 +132,14 @@ exports.getSigninOptions = async (req, res, next) => {
     service.user.credentialId = authData.credIdBuffer //credentialId,// req.body.credentialId // base64url.encode(authData.credIdBuffer) // req.body.credentialId //authData.credIdBuffer
     service.user.publicKey = publicKeyObject
     service.user.cosePublicKeyBuffer = authData.cosePublicKeyBuffer
+     
     console.log("user complete ", service.user)
 
-
-
     const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
+    const date = new Date(); 
 
     try{
-        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), service.user.name, base64url.encode(authData.cosePublicKeyBuffer)]); 
+        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), req.body.username, req.body.userID, base64url.encode(authData.cosePublicKeyBuffer), date]); 
 
     }   
     catch(err){
@@ -165,6 +152,7 @@ exports.getSigninOptions = async (req, res, next) => {
         res : "registrazione completata",
         bool : true,
         credentialId : base64url.encode(authData.credIdBuffer),
+        userID : req.body.userID
         //myWallet : myWallet
     }
     res.send(result);
@@ -383,21 +371,38 @@ exports.login = async (req, res, next) => {
     console.log("pem public key ", publicKey)
 
     const signatureIsValid = crypto.verify("SHA256", signedData, publicKey, signature) //verify signature with publicKey obtained during register
-   
-    if (signatureIsValid) {
+    
+    const VALID_TIME = 180
+    const last_update = new Date(user.last_update)
+    console.log("last_date", last_update)
+    const current_date = new Date()
+    console.log("current_date ", current_date)
+    const limit_date = new Date(last_update.setDate(last_update.getDate() + 180))
+    console.log("limit ", limit_date)
+
+    let checkCredentialBool = false
+    if(limit_date <= current_date){ //le credenziali devono essere aggiornate
+        console.log(" aggiornare le credenziali ")
+        checkCredentialBool = true
+    }
+
+    
+    if(signatureIsValid) {
         console.log(" User is authenticated")
 
         //recupera account algorand 
-        console.log("usernmae ", service.user.name)
+        console.log("username ", service.user.name)
         //let account = await loginAlgorandWallet(service.user.name)
 
         var result = {
             res : "User is authenticated",
             bool : true,
             credentialId : user.credential_id,
+            userID : user.user_id,
+            checkCredentialBool : checkCredentialBool,
             //account : account
         }
-    } else {
+    }else {
         console.log("Verification failed")
         var result = {
             res : "Verification failed"
@@ -573,4 +578,127 @@ async function loginAlgorandWallet(username){
     
     return account;
 
+}
+
+/**
+ * Verifica l'esistenza del credentialId associato all'utente e avvia il processo di creazione delle nuove credenziali
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} next 
+ */
+exports.updateCredentialsGetOptions = async (req, res, next) => {
+    
+    let name = req.body.username;
+    let userID = req.body.userID;
+    console.log("user credId", name, userID)
+
+     
+
+
+    const challenge = crypto.randomBytes(20).toString('hex');
+ 
+
+    const publicKeyCredentialCreationOptions = {
+        challenge: challenge, //Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
+        rp: {
+            name: "WebAuthn Demo ",
+            id: "localhost",
+        },
+        user: {
+            id: userID, //Uint8Array.from(id, c => c.charCodeAt(0)),
+            name: name,
+            displayName: name,
+        },
+        pubKeyCredParams: [
+            //{alg: -6, type: "public-key"}, //Ed25519
+            {alg: -7, type: "public-key"},
+            //{alg: -257 , type: 'public-key'}
+        ],
+        authenticatorSelection: {
+            authenticatorAttachment: "cross-platform",
+            //userVerification: "required"
+        },
+        timeout: 60000,
+        attestation: "direct"
+    };
+
+    
+    console.log("publicKeyCredentialCreationOptions ", publicKeyCredentialCreationOptions)
+
+
+    const options = {
+        publicKeyCredentialCreationOptions : publicKeyCredentialCreationOptions
+    }
+
+    res.send(options);
+
+}
+
+
+exports.updateCredentials = async (req, res, next) => {
+
+    // Decode attestation object
+    let attestationObjectBuffer = base64url.toBuffer(req.body.attestationObject);
+    let ctapMakeCredResp = cbor.decodeAllSync(attestationObjectBuffer)[0];
+    console.log("ctap ", ctapMakeCredResp)
+   
+    // parse authData
+    let authData = parseAuthData(ctapMakeCredResp.authData)
+    console.log("auth data", authData)
+
+    // decode publicKey
+    const publicKeyObject = cbor.decode(authData.cosePublicKeyBuffer)
+    console.log("public key ", publicKeyObject)
+
+     
+    //store publicKey and CredentialId
+    service.user.credentialId = authData.credIdBuffer //credentialId,// req.body.credentialId // base64url.encode(authData.credIdBuffer) // req.body.credentialId //authData.credIdBuffer
+    service.user.publicKey = publicKeyObject
+    service.user.cosePublicKeyBuffer = authData.cosePublicKeyBuffer
+    console.log("user complete ", service.user)
+
+    const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
+    const date = new Date(); 
+
+    try{
+ 
+        const [rows_delete, field_delete] = await connection.query(query.deleteUser, [req.body.username, req.body.userID]) //elimina vecchie credenziali
+        
+        const [rows, field] = await connection.query(query.insertUser, [ base64url.encode(authData.credIdBuffer), req.body.username, req.body.userID, base64url.encode(authData.cosePublicKeyBuffer), date]); 
+
+    }   
+    catch(err){
+        console.log("error: ", err)
+    }    
+
+    //let myWallet = await createAlgorandWallet(service.user.name)
+
+    result = {
+        res : "registrazione completata",
+        bool : true,
+        credentialId : base64url.encode(authData.credIdBuffer),
+        //myWallet : myWallet
+    }
+    res.send(result);
+}
+
+
+exports.deleteCredentials = async (req, res, next) => {
+    
+    let bool = false; 
+    const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
+ 
+    try{
+        const [rows_delete, field_delete] = await connection.query(query.deleteUser, [req.body.username, req.body.userID]) //elimina credenziali utente
+        bool = true
+    }   
+    catch(err){
+        console.log("error: ", err)
+    }    
+
+    result = {
+        bool : bool
+    }
+
+    res.send(result)
 }
