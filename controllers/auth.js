@@ -24,6 +24,7 @@ const utility = require('../utils/utility')
  */
 exports.getSigninOptions = async (req, res, next) => {
 
+
     const errors = validationResult(req);
 
     if(!errors.isEmpty()){ //verifica parametri sulla base dei controlli inseriti come middleware nella routes
@@ -34,61 +35,61 @@ exports.getSigninOptions = async (req, res, next) => {
     }
 
     var name = req.body.username;
-    //var id = "2"
-    var id = 'Kesv9fPtkDoh4Oz7Yq/pVgWHS8HhdlCto5cR0aBoVMw='
-
-     
-    //store user name
-    service.user.name = name
-   
-
- 
-
-    //const userID = "UZSL85T9AFC"
-    const randomUserID = crypto.randomBytes(8).toString('hex');
-    const userID = randomUserID.concat(new Date().getTime())
-    console.log("user ID", userID)
-
-    //const challenge = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk"
-    const challenge = crypto.randomBytes(20).toString('hex');
-
-
-    const publicKeyCredentialCreationOptions = {
-        challenge: challenge, //Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
-        rp: {
-            name: "WebAuthn Demo ",
-            id: "localhost",
-        },
-        user: {
-            id: userID, //Uint8Array.from(id, c => c.charCodeAt(0)),
-            name: name,
-            displayName: name,
-        },
-        pubKeyCredParams: [
-            //{alg: -6, type: "public-key"}, //Ed25519
-            {alg: -7, type: "public-key"},
-            //{alg: -257 , type: 'public-key'}
-        ],
-        authenticatorSelection: {
-            authenticatorAttachment: "cross-platform",
-            //userVerification: "required"
-        },
-        timeout: 60000,
-        attestation: "direct"
-    };
-
-    
-    console.log("publicKeyCredentialCreationOptions ", publicKeyCredentialCreationOptions)
-
-
-    const options = {
-        publicKeyCredentialCreationOptions : publicKeyCredentialCreationOptions
+    let resCheck = await verifyUsername(name)
+    if(resCheck){ //se ritorna true allora lo username è già presente nel DB, pertanto non permette la registrazione
+        console.log("res ", res)
+        res.send({result : 'username non disponibile'})
     }
-
-
+    else{
  
-    res.send(options);
+        //store user name
+        service.user.name = name
+     
+        //const userID = "UZSL85T9AFC"
+        const randomUserID = crypto.randomBytes(8).toString('hex');
+        const userID = randomUserID.concat(new Date().getTime())
+        console.log("user ID", userID)
+
+        //const challenge = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk"
+        const challenge = crypto.randomBytes(20).toString('hex');
+
+
+        const publicKeyCredentialCreationOptions = {
+            challenge: challenge, //Uint8Array.from(challengeResponse, c => c.charCodeAt(0)),
+            rp: {
+                name: "WebAuthn Demo ",
+                id: "localhost",
+            },
+            user: {
+                id: userID, //Uint8Array.from(id, c => c.charCodeAt(0)),
+                name: name,
+                displayName: name,
+            },
+            pubKeyCredParams: [
+                //{alg: -6, type: "public-key"}, //Ed25519
+                {alg: -7, type: "public-key"},
+                //{alg: -257 , type: 'public-key'}
+            ],
+            authenticatorSelection: {
+                authenticatorAttachment: "cross-platform",
+                //userVerification: "required"
+            },
+            timeout: 60000,
+            attestation: "direct"
+        };
+
+        
+        console.log("publicKeyCredentialCreationOptions ", publicKeyCredentialCreationOptions)
+
+
+        const options = {
+            publicKeyCredentialCreationOptions : publicKeyCredentialCreationOptions
+        }
+
+
     
+        res.send(options);
+    }
 }
 
 
@@ -701,4 +702,28 @@ exports.deleteCredentials = async (req, res, next) => {
     }
 
     res.send(result)
+}
+
+
+
+async function verifyUsername(name){
+    const connection = await database.getConnection(); //recupera una connessione dal pool di connessioni al dabatase
+    const date = new Date(); 
+
+    try{
+        const [rows, field] = await connection.query(query.getUserByUsername, [name]);
+        if(rows[0] != undefined){
+            console.log("rows ", rows)
+            return true
+        }
+        else{
+            return false
+        }
+
+    }   
+    catch(err){
+        console.log("error: ", err)
+    }    
+
+
 }
